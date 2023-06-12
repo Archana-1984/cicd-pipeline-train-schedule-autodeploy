@@ -34,37 +34,12 @@ pipeline {
                 }
             }
         }
-        stage('CanaryDeploy') {
-            
-            environment { 
-                CANARY_REPLICAS = 1
-            }
+         stage('DeployToK8s') {
             steps {
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube-canary.yml',
-                    enableConfigSubstitution: true
-                )
-            }
-        }
-        stage('DeployToProduction') {
-            
-            environment { 
-                CANARY_REPLICAS = 0
-            }
-            steps {
-                input 'Deploy to Production?'
-                milestone(1)
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube-canary.yml',
-                    enableConfigSubstitution: true
-                )
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube.yml',
-                    enableConfigSubstitution: true
-                )
+                withKubeConfig([credentialsId: 'jenkins-deploy', serverUrl: 'https://172.31.6.52:6443']) {
+                 sh 'kubectl apply -f train-schedule-service.yml'
+                 sh 'kubectl apply -f train-schedule-deployment.yml'
+                }
             }
         }
     }
